@@ -165,7 +165,7 @@ outer:
 				// break outer
 			}
 
-			remaining := min(length - len(r.Body), len(currentData))
+			remaining := min(length-len(r.Body), len(currentData))
 			r.Body += string(currentData[:remaining])
 			read += remaining
 

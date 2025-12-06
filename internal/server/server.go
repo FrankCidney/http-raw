@@ -9,7 +9,7 @@ import (
 	"httpfromtcp/internal/response"
 )
 
-type Handler func(w *response.Writer, req *request.Request)
+// type Handler func(w *response.Writer, req *request.Request)
 
 type Server struct {
 	listener  net.Listener
@@ -47,7 +47,7 @@ func (s *Server) handle(conn net.Conn) {
 		return
 	}
 
-	s.handler(responseWriter, req)
+	s.handler.ServeHTTP(responseWriter, req)
 }
 
 func (s *Server) listen() {

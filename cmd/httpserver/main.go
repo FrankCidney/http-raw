@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strings"
 	"syscall"
 
 	"httpfromtcp/internal/headers"
@@ -63,79 +62,93 @@ func respond200() []byte {
 </html>`)
 }
 
-func main() {
-	server, err := server.Serve(port, func(w *response.Writer, req *request.Request) {
-		h := response.GetDefaultHeaders(0)
-		body := respond200()
-		status := response.StatusOk
 
-		if req.RequestLine.RequestTarget == "/yourproblem" {
-			body = respond400()
-			status = response.StatusBadRequest
-		} else if req.RequestLine.RequestTarget == "/myproblem" {
-			body = respond500()
-			status = response.StatusInternalServerError
-		} else if req.RequestLine.RequestTarget == "/video" {
-			path := filepath.Join("assets", "vim.mp4")
-			data, err := os.ReadFile(path)
-			if err != nil {
-				body = respond500()
-				status = response.StatusInternalServerError
-			} else {
-				h.Replace("Content-Type", "video/mp4")
-				h.Replace("Content-Length", fmt.Sprintf("%d", len(data)))
-				w.WriteStatusLine(status)
-				w.WriteHeaders(h)
-				w.WriteBody(data)
-				return
-			}
-		} else if strings.HasPrefix(req.RequestLine.RequestTarget, "/httpbin/stream") {
-			target := req.RequestLine.RequestTarget
-			res, err := http.Get("https://httpbin.org/" + target[len("/httpbin/"):])
-			if err != nil {
-				body = respond500()
-				status = response.StatusInternalServerError
-			} else {
-				w.WriteStatusLine(response.StatusOk)
-				h.Delete("Content-Length")
-				h.Set("Transfer-Encoding", "chunked")
-				h.Replace("Content-Type", "text/plain")
-				h.Set("Trailer", "X-Content-SHA256")
-				h.Set("Trailer", "X-Content-Length")
-				w.WriteHeaders(h)
 
-				fullBody := []byte{}
-				for {
-					data := make([]byte, 32)
-					n, err := res.Body.Read(data)
-					if err != nil {
-						break
-					}
-					fullBody = append(fullBody, data[:n]...)
-					w.WriteBody([]byte(fmt.Sprintf("%x\r\n", n)))
-					w.WriteBody(data[:n])
-					w.WriteBody([]byte("\r\n"))
-				}
-				w.WriteBody([]byte("0\r\n\r\n"))
-				trailers := headers.NewHeaders()
-				sum := sha256.Sum256(fullBody)
-				trailers.Set("X-Content-SHA256", toString(sum[:]))
-				trailers.Set("X-Content-Length", fmt.Sprintf("%d", len(fullBody)))
-				w.WriteTrailers(trailers)
-				return
-			}
-		}
+func handleYourProblem(w *response.Writer, r *request.Request) {
+	h := response.GetDefaultHeaders(0)
+	body := respond400()
 
-		h.Replace("Content-Length", fmt.Sprintf("%d", len(body)))
-		h.Replace("Content-Type", "text/html")
-		w.WriteStatusLine(status)
+	h.Replace("Content-Length", fmt.Sprintf("%d", len(body)))
+	h.Replace("Content-Type", "text/html")
+	w.WriteStatusLine(response.StatusBadRequest)
+	w.WriteHeaders(h)
+	w.WriteBody(body)
+}
+
+func handleMyProblem(w *response.Writer, r *request.Request) {
+	h := response.GetDefaultHeaders(0)
+	body := respond500()
+
+	h.Replace("Content-Length", fmt.Sprintf("%d", len(body)))
+	h.Replace("Content-Type", "text/html")
+	w.WriteStatusLine(response.StatusInternalServerError)
+	w.WriteHeaders(h)
+	w.WriteBody(body)
+}
+
+func handleVideo(w *response.Writer, r *request.Request) {
+	h := response.GetDefaultHeaders(0)
+	path := filepath.Join("assets", "vim.mp4")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		handleMyProblem(w, r)
+	} else {
+		h.Replace("Content-Type", "video/mp4")
+		h.Replace("Content-Length", fmt.Sprintf("%d", len(data)))
+		w.WriteStatusLine(response.StatusOk)
 		w.WriteHeaders(h)
-		w.WriteBody(body)
-	})
+		w.WriteBody(data)
+	}
+}
+
+func handleHttpbinStream(w *response.Writer, r *request.Request) {
+	h := response.GetDefaultHeaders(0)
+	target := r.RequestLine.RequestTarget
+	res, err := http.Get("https://httpbin.org/" + target[len("/httpbin/"):])
+	if err != nil {
+		handleMyProblem(w, r)
+	} else {
+		w.WriteStatusLine(response.StatusOk)
+		h.Delete("Content-Length")
+		h.Set("Transfer-Encoding", "chunked")
+		h.Replace("Content-Type", "text/plain")
+		h.Set("Trailer", "X-Content-SHA256")
+		h.Set("Trailer", "X-Content-Length")
+		w.WriteHeaders(h)
+
+		fullBody := []byte{}
+		for {
+			data := make([]byte, 32)
+			n, err := res.Body.Read(data)
+			if err != nil {
+				break
+			}
+			fullBody = append(fullBody, data[:n]...)
+			w.WriteBody([]byte(fmt.Sprintf("%x\r\n", n)))
+			w.WriteBody(data[:n])
+			w.WriteBody([]byte("\r\n"))
+		}
+		w.WriteBody([]byte("0\r\n\r\n"))
+		trailers := headers.NewHeaders()
+		sum := sha256.Sum256(fullBody)
+		trailers.Set("X-Content-SHA256", toString(sum[:]))
+		trailers.Set("X-Content-Length", fmt.Sprintf("%d", len(fullBody)))
+		w.WriteTrailers(trailers)
+	}
+}
+
+func main() {
+	mux := server.NewServeMux()
+
+	mux.HandleFunc("/yourproblem", handleYourProblem)
+	mux.HandleFunc("/myproblem", handleMyProblem)
+	mux.HandleFunc("/video", handleVideo)
+	mux.HandleFunc("/httpbin/stream", handleHttpbinStream)
+
+	server, err := server.Serve(port, mux)
 	if err != nil {
 		log.Fatalf("Error starting server: %v", err)
 	}
-
 	defer server.Close()
 	log.Println("Server started on port", port)
 
