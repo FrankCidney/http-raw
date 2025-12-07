@@ -41,6 +41,7 @@ func (s *Server) handle(conn net.Conn) {
 	responseWriter := response.NewWriter(conn)
 	headers := response.GetDefaultHeaders(0)
 	req, err := request.RequestFromReader(conn)
+	fmt.Println("request:", req)
 	if err != nil {
 		responseWriter.WriteStatusLine(response.StatusBadRequest)
 		responseWriter.WriteHeaders(headers)

@@ -73,10 +73,10 @@ func (w *Writer) WriteBody(p []byte) (int, error) {
 	return n, err
 }
 
-func (w *Writer) WriteTrailers(h headers.Headers) error {
-	err := w.WriteHeaders(h)
-	return err
-}
+// func (w *Writer) WriteTrailers(h headers.Headers) error {
+// 	err := w.WriteHeaders(h)
+// 	return err
+// }
 
 // func (w *Writer) WriteChunkedBody(p []byte) (int, error) {
 // 	n, err := w.writer.Write([]byte(fmt.Sprintf("%x\r\n%v\r\n", len(p), p)))

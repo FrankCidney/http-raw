@@ -133,7 +133,7 @@ func handleHttpbinStream(w *response.Writer, r *request.Request) {
 		sum := sha256.Sum256(fullBody)
 		trailers.Set("X-Content-SHA256", toString(sum[:]))
 		trailers.Set("X-Content-Length", fmt.Sprintf("%d", len(fullBody)))
-		w.WriteTrailers(trailers)
+		w.WriteHeaders(trailers)
 	}
 }
 
