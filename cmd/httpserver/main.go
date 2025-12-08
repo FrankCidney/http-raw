@@ -26,6 +26,18 @@ func toString(bytes []byte) string {
 	return out
 }
 
+func respond404() []byte {
+	return []byte(`<html>
+  <head>
+    <title>404 Not Found</title>
+  </head>
+  <body>
+    <h1>Not Found</h1>
+    <p>What you're looking for doesn't exist.</p>
+  </body>
+</html>`)
+}
+
 func respond400() []byte {
 	return []byte(`<html>
   <head>
@@ -62,7 +74,16 @@ func respond200() []byte {
 </html>`)
 }
 
+func handleNotFound(w *response.Writer, r *request.Request) {
+	h := response.GetDefaultHeaders(0)
+	body := respond404()
 
+	h.Replace("Content-Length", fmt.Sprintf("%d", len(body)))
+	h.Replace("Content-Type", "text/html")
+	w.WriteStatusLine(response.StatusNotFound)
+	w.WriteHeaders(h)
+	w.WriteBody(body)
+}
 
 func handleYourProblem(w *response.Writer, r *request.Request) {
 	h := response.GetDefaultHeaders(0)
@@ -144,6 +165,7 @@ func main() {
 	mux.HandleFunc("/myproblem", handleMyProblem)
 	mux.HandleFunc("/video", handleVideo)
 	mux.HandleFunc("/httpbin/stream", handleHttpbinStream)
+	mux.HandleFunc("/notfound", handleNotFound)
 
 	server, err := server.Serve(port, mux)
 	if err != nil {

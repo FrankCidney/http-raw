@@ -22,6 +22,7 @@ var (
 	StatusOk                  StatusCode = 200
 	StatusBadRequest          StatusCode = 400
 	StatusInternalServerError StatusCode = 500
+	StatusNotFound StatusCode = 400
 )
 
 // func (w *Writer) Write(b []byte) (int, error) {
@@ -39,6 +40,8 @@ func (w *Writer) WriteStatusLine(statusCode StatusCode) error {
 		statusLine = ([]byte("HTTP/1.1 400 Bad Request\r\n"))
 	case StatusInternalServerError:
 		statusLine = ([]byte("HTTP/1.1 500 Internal Server Error\r\n"))
+	case StatusNotFound:
+		statusLine = ([]byte("HTTP/1.1 404 Not Found\r\n"))
 	default:
 		return fmt.Errorf("unknown status code")
 	}

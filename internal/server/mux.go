@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"httpfromtcp/internal/request"
 	"httpfromtcp/internal/response"
 	"strings"
@@ -25,6 +26,7 @@ func (mux *ServeMux) ServeHTTP(w *response.Writer, r *request.Request) {
 	// finding direct match
 	if handler, ok := mux.handlers[path]; ok {
 		handler.ServeHTTP(w, r)
+		return
 	}
 
 	// simple wildcard matching, handles 3 kinds of paths: 
@@ -39,6 +41,11 @@ func (mux *ServeMux) ServeHTTP(w *response.Writer, r *request.Request) {
 				bestMatch = handler
 			}
 		}
+	}
+
+	if bestMatch == nil {
+		bestMatch = mux.handlers["/notfound"]
+		fmt.Println("best match:", bestMatch)
 	}
 	bestMatch.ServeHTTP(w, r)
 }

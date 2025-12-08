@@ -94,7 +94,7 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 			break
 		}
 
-		name, value, err := parseHeader(data[n:idx+n])
+		name, value, err := parseHeader(data[n : idx+n])
 		if err != nil {
 			return 0, false, err
 		}
@@ -110,4 +110,4 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	// fmt.Println("n:",n)
 	// fmt.Println("done:", done)
 	return n, done, nil
-}	
+}
